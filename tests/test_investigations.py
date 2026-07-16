@@ -125,9 +125,7 @@ def test_monthly_revenue_components() -> None:
             abs_tol=0.01,
         )
 
-        assert february[
-            "average_order_value_change_percentage"
-        ] == -10.00
+        assert february["average_order_value_change_percentage"] == -10.00
 
     finally:
         connection.close()
@@ -184,25 +182,13 @@ def test_category_and_state_changes() -> None:
             table_name=TEST_TABLE_NAME,
         )
 
-        assert (
-            category_result.iloc[0]["product_category"]
-            == "electronics"
-        )
+        assert category_result.iloc[0]["product_category"] == "electronics"
 
-        assert (
-            category_result.iloc[0]["change_amount"]
-            == -120.00
-        )
+        assert category_result.iloc[0]["change_amount"] == -120.00
 
-        assert (
-            state_result.iloc[0]["customer_state"]
-            == "CA"
-        )
+        assert state_result.iloc[0]["customer_state"] == "CA"
 
-        assert (
-            state_result.iloc[0]["change_amount"]
-            == -120.00
-        )
+        assert state_result.iloc[0]["change_amount"] == -120.00
 
     finally:
         connection.close()
@@ -222,20 +208,11 @@ def test_complete_revenue_investigation() -> None:
             driver_limit=3,
         )
 
-        assert result["current_month"] == pd.Timestamp(
-            "2024-02-01"
-        )
+        assert result["current_month"] == pd.Timestamp("2024-02-01")
 
-        assert result["previous_month"] == pd.Timestamp(
-            "2024-01-01"
-        )
+        assert result["previous_month"] == pd.Timestamp("2024-01-01")
 
-        assert (
-            result["current_metrics"][
-                "revenue_change_amount"
-            ]
-            == -120.00
-        )
+        assert result["current_metrics"]["revenue_change_amount"] == -120.00
 
         assert not result["category_changes"].empty
         assert not result["state_changes"].empty
@@ -245,11 +222,6 @@ def test_complete_revenue_investigation() -> None:
 
 
 def test_router_selects_revenue_investigation() -> None:
-    route = route_question(
-        "Why did monthly revenue decline?"
-    )
+    route = route_question("Why did monthly revenue decline?")
 
-    assert (
-        route.analysis_type
-        == AnalysisType.REVENUE_CHANGE_INVESTIGATION
-    )
+    assert route.analysis_type == AnalysisType.REVENUE_CHANGE_INVESTIGATION

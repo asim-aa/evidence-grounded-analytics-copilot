@@ -13,9 +13,7 @@ class AnalysisType(StrEnum):
     REVENUE_BY_STATE = "revenue_by_state"
     DELIVERY_BY_STATE = "delivery_by_state"
     LATE_VS_ON_TIME = "late_vs_on_time"
-    REVENUE_CHANGE_INVESTIGATION = (
-        "revenue_change_investigation"
-    )
+    REVENUE_CHANGE_INVESTIGATION = "revenue_change_investigation"
     UNSUPPORTED = "unsupported"
 
 
