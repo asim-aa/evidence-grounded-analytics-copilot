@@ -234,6 +234,7 @@ If any requirement cannot be satisfied, explicitly acknowledge the
 limitation instead of guessing.
 """.strip()
 
+
 def build_explanation_prompt(
     evidence: EvidenceResult,
 ) -> str:

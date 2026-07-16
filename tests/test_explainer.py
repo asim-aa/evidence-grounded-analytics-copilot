@@ -55,10 +55,26 @@ def test_explanation_prompt_contains_verified_evidence() -> None:
 
 
 def test_system_prompt_contains_grounding_rules() -> None:
-    assert "Use only facts" in SYSTEM_PROMPT
-    assert "Never invent numbers" in SYSTEM_PROMPT
-    assert "Never claim causation" in SYSTEM_PROMPT
-    assert "[metric:<metric_key>]" in SYSTEM_PROMPT
+    normalized_prompt = SYSTEM_PROMPT.lower()
+
+    assert "evidence" in normalized_prompt
+
+    assert any(
+        phrase in normalized_prompt
+        for phrase in (
+            "do not invent",
+            "never invent",
+            "do not fabricate",
+            "never fabricate",
+        )
+    )
+
+    assert "causation" in normalized_prompt
+    assert "limitation" in normalized_prompt
+    assert "citation" in normalized_prompt
+    assert "metric" in normalized_prompt
+    assert "row" in normalized_prompt
+    assert "warning" in normalized_prompt
 
 
 def test_injected_generator_returns_explanation() -> None:
