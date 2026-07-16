@@ -15,10 +15,7 @@ def test_required_olist_files_exist() -> None:
     file_paths = validate_required_files()
 
     assert file_paths
-    assert all(
-        path.exists()
-        for path in file_paths.values()
-    )
+    assert all(path.exists() for path in file_paths.values())
 
 
 def test_analytical_table_has_valid_grain(
@@ -26,9 +23,7 @@ def test_analytical_table_has_valid_grain(
 ) -> None:
     database_path = tmp_path / "test_olist.duckdb"
 
-    connection = duckdb.connect(
-        str(database_path)
-    )
+    connection = duckdb.connect(str(database_path))
 
     try:
         file_paths = validate_required_files()
