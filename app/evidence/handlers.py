@@ -1,5 +1,7 @@
 from __future__ import annotations
-
+from app.evidence.investigations import (
+    investigate_revenue_change,
+)
 import json
 from typing import Any
 
@@ -20,7 +22,6 @@ from app.evidence.models import (
     AnalysisType,
     EvidenceResult,
 )
-
 
 def _dataframe_to_records(
     dataframe: pd.DataFrame,
@@ -428,7 +429,213 @@ def handle_late_vs_on_time(
         ],
     )
 
+def handle_revenue_change_investigation(
+    question: str,
+    connection: duckdb.DuckDBPyConnection,
+) -> EvidenceResult:
+    """
+    Investigate a monthly revenue change using several analyses.
+    """
+    investigation = investigate_revenue_change(
+        connection=connection,
+        question=question,
+        minimum_order_count=100,
+        driver_limit=5,
+    )
 
+    current = investigation["current_metrics"]
+    previous = investigation["previous_metrics"]
+
+    category_changes = investigation[
+        "category_changes"
+    ]
+
+    state_changes = investigation[
+        "state_changes"
+    ]
+
+    current_month = pd.Timestamp(
+        investigation["current_month"]
+    ).strftime("%Y-%m")
+
+    previous_month = pd.Timestamp(
+        investigation["previous_month"]
+    ).strftime("%Y-%m")
+
+    revenue_change = float(
+        current["revenue_change_amount"]
+    )
+
+    revenue_change_percentage = float(
+        current["revenue_change_percentage"]
+    )
+
+    order_change_percentage = float(
+        current["order_count_change_percentage"]
+    )
+
+    aov_change_percentage = float(
+        current[
+            "average_order_value_change_percentage"
+        ]
+    )
+
+    direction = (
+        "decreased"
+        if revenue_change < 0
+        else "increased"
+        if revenue_change > 0
+        else "did not change"
+    )
+
+    larger_component = (
+        "order volume"
+        if abs(order_change_percentage)
+        >= abs(aov_change_percentage)
+        else "average order value"
+    )
+
+    category_leader = (
+        category_changes.iloc[0]
+        if not category_changes.empty
+        else None
+    )
+
+    state_leader = (
+        state_changes.iloc[0]
+        if not state_changes.empty
+        else None
+    )
+
+    summary = (
+        f"Item revenue {direction} by "
+        f"{abs(revenue_change_percentage):.2f}% "
+        f"from {previous_month} to {current_month}, "
+        f"a change of {revenue_change:,.2f}. "
+        f"Order count changed by "
+        f"{order_change_percentage:.2f}%, while average "
+        f"order value changed by {aov_change_percentage:.2f}%. "
+        f"The larger relative movement was in "
+        f"{larger_component}."
+    )
+
+    metrics: dict[str, Any] = {
+        "current_month": current_month,
+        "previous_month": previous_month,
+        "current_revenue": float(
+            current["item_revenue"]
+        ),
+        "previous_revenue": float(
+            previous["item_revenue"]
+        ),
+        "revenue_change_amount": revenue_change,
+        "revenue_change_percentage": (
+            revenue_change_percentage
+        ),
+        "current_order_count": int(
+            current["order_count"]
+        ),
+        "previous_order_count": int(
+            previous["order_count"]
+        ),
+        "order_count_change_percentage": (
+            order_change_percentage
+        ),
+        "current_average_order_value": float(
+            current["average_order_value"]
+        ),
+        "previous_average_order_value": float(
+            previous["average_order_value"]
+        ),
+        "average_order_value_change_percentage": (
+            aov_change_percentage
+        ),
+        "larger_relative_component": larger_component,
+    }
+
+    if category_leader is not None:
+        metrics.update(
+            {
+                "largest_category_contributor": str(
+                    category_leader[
+                        "product_category"
+                    ]
+                ),
+                "largest_category_change_amount": float(
+                    category_leader["change_amount"]
+                ),
+            }
+        )
+
+    if state_leader is not None:
+        metrics.update(
+            {
+                "largest_state_contributor": str(
+                    state_leader["customer_state"]
+                ),
+                "largest_state_change_amount": float(
+                    state_leader["change_amount"]
+                ),
+            }
+        )
+
+    category_rows = _dataframe_to_records(
+        category_changes
+    )
+
+    for row in category_rows:
+        row["evidence_scope"] = "category_change"
+
+    state_rows = _dataframe_to_records(
+        state_changes
+    )
+
+    for row in state_rows:
+        row["evidence_scope"] = "state_change"
+
+    return EvidenceResult(
+        question=question,
+        analysis_type=(
+            AnalysisType.REVENUE_CHANGE_INVESTIGATION
+        ),
+        summary=summary,
+        metrics=metrics,
+        supporting_rows=category_rows + state_rows,
+        methodology={
+            "comparison_grain": "complete calendar month",
+            "revenue_metric": "SUM(item_price)",
+            "order_volume_metric": (
+                "COUNT(DISTINCT order_id)"
+            ),
+            "average_order_value_metric": (
+                "item revenue divided by distinct orders"
+            ),
+            "category_decomposition": (
+                "month-over-month item revenue change "
+                "grouped by product category"
+            ),
+            "state_decomposition": (
+                "month-over-month item revenue change "
+                "grouped by customer state"
+            ),
+            "minimum_order_count_per_month": 100,
+        },
+        warnings=[
+            (
+                "The analysis identifies descriptive contributors "
+                "and does not prove causation."
+            ),
+            (
+                "Order-count and average-order-value changes are "
+                "related components, not an exact additive causal "
+                "decomposition."
+            ),
+            (
+                "Revenue excludes freight and does not represent "
+                "profit."
+            ),
+        ],
+    )
 def handle_unsupported_question(
     question: str,
     connection: duckdb.DuckDBPyConnection,

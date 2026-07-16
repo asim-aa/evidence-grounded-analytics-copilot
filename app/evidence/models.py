@@ -7,16 +7,15 @@ from pydantic import BaseModel, Field
 
 
 class AnalysisType(StrEnum):
-    """
-    Supported deterministic analysis routes.
-    """
-
     CORE_KPIS = "core_kpis"
     MONTHLY_REVENUE_TREND = "monthly_revenue_trend"
     REVENUE_BY_CATEGORY = "revenue_by_category"
     REVENUE_BY_STATE = "revenue_by_state"
     DELIVERY_BY_STATE = "delivery_by_state"
     LATE_VS_ON_TIME = "late_vs_on_time"
+    REVENUE_CHANGE_INVESTIGATION = (
+        "revenue_change_investigation"
+    )
     UNSUPPORTED = "unsupported"
 
 

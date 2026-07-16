@@ -11,6 +11,7 @@ from app.evidence.handlers import (
     handle_monthly_revenue_trend,
     handle_revenue_by_category,
     handle_revenue_by_state,
+    handle_revenue_change_investigation,
     handle_unsupported_question,
 )
 from app.evidence.models import (
@@ -35,8 +36,9 @@ HANDLER_REGISTRY: dict[
     AnalysisType.CORE_KPIS: handle_core_kpis,
     AnalysisType.MONTHLY_REVENUE_TREND: (handle_monthly_revenue_trend),
     AnalysisType.REVENUE_BY_CATEGORY: (handle_revenue_by_category),
-    AnalysisType.REVENUE_BY_STATE: handle_revenue_by_state,
-    AnalysisType.DELIVERY_BY_STATE: handle_delivery_by_state,
-    AnalysisType.LATE_VS_ON_TIME: handle_late_vs_on_time,
-    AnalysisType.UNSUPPORTED: handle_unsupported_question,
+    AnalysisType.REVENUE_BY_STATE: (handle_revenue_by_state),
+    AnalysisType.DELIVERY_BY_STATE: (handle_delivery_by_state),
+    AnalysisType.LATE_VS_ON_TIME: (handle_late_vs_on_time),
+    AnalysisType.REVENUE_CHANGE_INVESTIGATION: (handle_revenue_change_investigation),
+    AnalysisType.UNSUPPORTED: (handle_unsupported_question),
 }
