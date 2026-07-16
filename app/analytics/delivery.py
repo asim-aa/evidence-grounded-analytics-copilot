@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 import duckdb
 import pandas as pd
-
 from app.analytics.metrics import open_analytics_connection
 from app.config import ANALYTICAL_TABLE_NAME
 
@@ -10,9 +8,7 @@ from app.config import ANALYTICAL_TABLE_NAME
 def _validate_minimum_order_count(
     minimum_order_count: int,
 ) -> None:
-    """
-    Validate a minimum-order threshold.
-    """
+    """Validate a minimum-order threshold."""
     if minimum_order_count <= 0:
         raise ValueError("minimum_order_count must be greater than zero.")
 
@@ -20,9 +16,7 @@ def _validate_minimum_order_count(
 def _validate_limit(
     limit: int,
 ) -> None:
-    """
-    Validate a row limit.
-    """
+    """Validate a row limit."""
     if limit <= 0:
         raise ValueError("limit must be greater than zero.")
 
@@ -35,8 +29,7 @@ def get_delivery_performance_by_state(
     """
     Return delivery and review performance by customer state.
 
-    Delivery and review values are first reduced to one row per order so
-    multi-item orders do not receive additional weight.
+    Delivery and review values are first reduced to one row per order.
     """
     _validate_minimum_order_count(minimum_order_count)
 
@@ -57,11 +50,23 @@ def get_delivery_performance_by_state(
         SELECT
             customer_state,
             COUNT(*) AS order_count,
+            COUNT(review_score) AS reviewed_order_count,
+
+            ROUND(
+                100.0 * COUNT(review_score)
+                / NULLIF(COUNT(*), 0),
+                2
+            ) AS review_coverage_percentage,
 
             ROUND(
                 AVG(delivery_days),
                 2
             ) AS average_delivery_days,
+
+            ROUND(
+                MEDIAN(delivery_days),
+                2
+            ) AS median_delivery_days,
 
             ROUND(
                 100.0 * AVG(
@@ -80,6 +85,17 @@ def get_delivery_performance_by_state(
             ) AS average_delay_days,
 
             ROUND(
+                AVG(
+                    CASE
+                        WHEN is_late_delivery = TRUE
+                            THEN delivery_delay_days
+                        ELSE NULL
+                    END
+                ),
+                2
+            ) AS average_late_days_among_late_orders,
+
+            ROUND(
                 AVG(review_score),
                 2
             ) AS average_review_score
@@ -88,8 +104,9 @@ def get_delivery_performance_by_state(
         WHERE customer_state IS NOT NULL
         GROUP BY customer_state
         HAVING COUNT(*) >= ?
-        ORDER BY late_delivery_rate_percentage DESC,
-                 order_count DESC
+        ORDER BY
+            late_delivery_rate_percentage DESC,
+            order_count DESC
         """,
         [minimum_order_count],
     ).fetchdf()
@@ -103,8 +120,7 @@ def get_delivery_performance_by_category(
     """
     Return delivery and review performance by product category.
 
-    An order may contain products from multiple categories. Therefore,
-    each order-category pair is reduced to one row before aggregation.
+    Each order-category pair is reduced to one row before aggregation.
     """
     _validate_minimum_order_count(minimum_order_count)
 
@@ -128,11 +144,23 @@ def get_delivery_performance_by_category(
         SELECT
             product_category,
             COUNT(*) AS order_count,
+            COUNT(review_score) AS reviewed_order_count,
+
+            ROUND(
+                100.0 * COUNT(review_score)
+                / NULLIF(COUNT(*), 0),
+                2
+            ) AS review_coverage_percentage,
 
             ROUND(
                 AVG(delivery_days),
                 2
             ) AS average_delivery_days,
+
+            ROUND(
+                MEDIAN(delivery_days),
+                2
+            ) AS median_delivery_days,
 
             ROUND(
                 100.0 * AVG(
@@ -151,6 +179,17 @@ def get_delivery_performance_by_category(
             ) AS average_delay_days,
 
             ROUND(
+                AVG(
+                    CASE
+                        WHEN is_late_delivery = TRUE
+                            THEN delivery_delay_days
+                        ELSE NULL
+                    END
+                ),
+                2
+            ) AS average_late_days_among_late_orders,
+
+            ROUND(
                 AVG(review_score),
                 2
             ) AS average_review_score
@@ -158,8 +197,9 @@ def get_delivery_performance_by_category(
         FROM order_category_level
         GROUP BY product_category
         HAVING COUNT(*) >= ?
-        ORDER BY late_delivery_rate_percentage DESC,
-                 order_count DESC
+        ORDER BY
+            late_delivery_rate_percentage DESC,
+            order_count DESC
         """,
         [minimum_order_count],
     ).fetchdf()
@@ -170,9 +210,7 @@ def compare_late_and_on_time_orders(
     table_name: str = ANALYTICAL_TABLE_NAME,
 ) -> pd.DataFrame:
     """
-    Compare delivery duration and review scores for late and on-time orders.
-
-    Orders without a known delivery outcome are excluded.
+    Compare delivery duration and reviews for late and on-time orders.
     """
     return connection.execute(
         f"""
@@ -193,11 +231,23 @@ def compare_late_and_on_time_orders(
             END AS delivery_status,
 
             COUNT(*) AS order_count,
+            COUNT(review_score) AS reviewed_order_count,
+
+            ROUND(
+                100.0 * COUNT(review_score)
+                / NULLIF(COUNT(*), 0),
+                2
+            ) AS review_coverage_percentage,
 
             ROUND(
                 AVG(delivery_days),
                 2
             ) AS average_delivery_days,
+
+            ROUND(
+                MEDIAN(delivery_days),
+                2
+            ) AS median_delivery_days,
 
             ROUND(
                 AVG(review_score),
@@ -221,11 +271,8 @@ def get_worst_delivery_sellers(
     """
     Return sellers with the highest late-delivery rates.
 
-    Sellers below the minimum-order threshold are excluded to prevent
-    unstable rankings based on very small samples.
-
-    An order can contain items from more than one seller. Therefore, the
-    query uses one row per order-seller pair.
+    Each order-seller pair is reduced to one row. Sellers below the
+    minimum-order threshold are excluded.
     """
     _validate_minimum_order_count(minimum_order_count)
     _validate_limit(limit)
@@ -251,11 +298,23 @@ def get_worst_delivery_sellers(
             SELECT
                 seller_id,
                 COUNT(*) AS order_count,
+                COUNT(review_score) AS reviewed_order_count,
+
+                ROUND(
+                    100.0 * COUNT(review_score)
+                    / NULLIF(COUNT(*), 0),
+                    2
+                ) AS review_coverage_percentage,
 
                 ROUND(
                     AVG(delivery_days),
                     2
                 ) AS average_delivery_days,
+
+                ROUND(
+                    MEDIAN(delivery_days),
+                    2
+                ) AS median_delivery_days,
 
                 ROUND(
                     100.0 * AVG(
@@ -274,6 +333,17 @@ def get_worst_delivery_sellers(
                 ) AS average_delay_days,
 
                 ROUND(
+                    AVG(
+                        CASE
+                            WHEN is_late_delivery = TRUE
+                                THEN delivery_delay_days
+                            ELSE NULL
+                        END
+                    ),
+                    2
+                ) AS average_late_days_among_late_orders,
+
+                ROUND(
                     AVG(review_score),
                     2
                 ) AS average_review_score
@@ -283,16 +353,11 @@ def get_worst_delivery_sellers(
             HAVING COUNT(*) >= ?
         )
 
-        SELECT
-            seller_id,
-            order_count,
-            average_delivery_days,
-            late_delivery_rate_percentage,
-            average_delay_days,
-            average_review_score
+        SELECT *
         FROM seller_performance
-        ORDER BY late_delivery_rate_percentage DESC,
-                 order_count DESC
+        ORDER BY
+            late_delivery_rate_percentage DESC,
+            order_count DESC
         LIMIT ?
         """,
         [
@@ -307,10 +372,10 @@ def get_delivery_review_relationship(
     table_name: str = ANALYTICAL_TABLE_NAME,
 ) -> pd.DataFrame:
     """
-    Group orders into delivery-delay bands and compare review scores.
+    Group orders into delivery-delay bands and compare review outcomes.
 
-    delivery_delay_days is actual delivery date minus estimated delivery
-    date. Positive values indicate late delivery.
+    Positive delivery_delay_days values indicate late delivery.
+    Negative values indicate early delivery.
     """
     return connection.execute(
         f"""
@@ -332,22 +397,16 @@ def get_delivery_review_relationship(
                 CASE
                     WHEN delivery_delay_days <= -8
                         THEN 'more_than_7_days_early'
-
                     WHEN delivery_delay_days BETWEEN -7 AND -1
                         THEN '1_to_7_days_early'
-
                     WHEN delivery_delay_days = 0
                         THEN 'on_estimated_date'
-
                     WHEN delivery_delay_days BETWEEN 1 AND 3
                         THEN '1_to_3_days_late'
-
                     WHEN delivery_delay_days BETWEEN 4 AND 7
                         THEN '4_to_7_days_late'
-
                     WHEN delivery_delay_days >= 8
                         THEN 'more_than_7_days_late'
-
                     ELSE NULL
                 END AS delivery_delay_band,
 
@@ -368,11 +427,23 @@ def get_delivery_review_relationship(
         SELECT
             delivery_delay_band,
             COUNT(*) AS order_count,
+            COUNT(review_score) AS reviewed_order_count,
+
+            ROUND(
+                100.0 * COUNT(review_score)
+                / NULLIF(COUNT(*), 0),
+                2
+            ) AS review_coverage_percentage,
 
             ROUND(
                 AVG(delivery_delay_days),
                 2
             ) AS average_delay_days,
+
+            ROUND(
+                MEDIAN(delivery_delay_days),
+                2
+            ) AS median_delay_days,
 
             ROUND(
                 AVG(review_score),
@@ -389,72 +460,69 @@ def get_delivery_review_relationship(
     ).fetchdf()
 
 
+def _format_delivery_dataframe(
+    dataframe: pd.DataFrame,
+) -> str:
+    """Format delivery analysis output for terminal display."""
+    formatters = {}
+
+    integer_columns = {
+        "order_count",
+        "reviewed_order_count",
+    }
+
+    percentage_columns = {
+        "review_coverage_percentage",
+        "late_delivery_rate_percentage",
+    }
+
+    decimal_columns = {
+        "average_delivery_days",
+        "median_delivery_days",
+        "average_delay_days",
+        "median_delay_days",
+        "average_late_days_among_late_orders",
+        "average_review_score",
+    }
+
+    for column in dataframe.columns:
+        if column in integer_columns:
+            formatters[column] = lambda value: f"{value:,}"
+
+        elif column in percentage_columns:
+            formatters[column] = lambda value: f"{value:.2f}%"
+
+        elif column in decimal_columns:
+            formatters[column] = lambda value: f"{value:.2f}"
+
+    return dataframe.to_string(
+        index=False,
+        formatters=formatters,
+    )
+
+
 def print_delivery_summary(
     state_performance: pd.DataFrame,
     late_comparison: pd.DataFrame,
     worst_sellers: pd.DataFrame,
     delay_relationship: pd.DataFrame,
 ) -> None:
-    """
-    Print a readable summary of delivery analyses.
-    """
+    """Print a readable summary of delivery analyses."""
     print("States with highest late-delivery rates:")
-    print(
-        state_performance.head(10).to_string(
-            index=False,
-            formatters={
-                "order_count": lambda value: f"{value:,}",
-                "average_delivery_days": (lambda value: f"{value:.2f}"),
-                "late_delivery_rate_percentage": (lambda value: f"{value:.2f}%"),
-                "average_delay_days": (lambda value: f"{value:.2f}"),
-                "average_review_score": (lambda value: f"{value:.2f}"),
-            },
-        )
-    )
+    print(_format_delivery_dataframe(state_performance.head(10)))
 
     print("\nLate versus on-time orders:")
-    print(
-        late_comparison.to_string(
-            index=False,
-            formatters={
-                "order_count": lambda value: f"{value:,}",
-                "average_delivery_days": (lambda value: f"{value:.2f}"),
-                "average_review_score": (lambda value: f"{value:.2f}"),
-            },
-        )
-    )
+    print(_format_delivery_dataframe(late_comparison))
 
     print("\nWorst delivery sellers:")
-    print(
-        worst_sellers.to_string(
-            index=False,
-            formatters={
-                "order_count": lambda value: f"{value:,}",
-                "average_delivery_days": (lambda value: f"{value:.2f}"),
-                "late_delivery_rate_percentage": (lambda value: f"{value:.2f}%"),
-                "average_delay_days": (lambda value: f"{value:.2f}"),
-                "average_review_score": (lambda value: f"{value:.2f}"),
-            },
-        )
-    )
+    print(_format_delivery_dataframe(worst_sellers))
 
     print("\nReview score by delivery-delay band:")
-    print(
-        delay_relationship.to_string(
-            index=False,
-            formatters={
-                "order_count": lambda value: f"{value:,}",
-                "average_delay_days": (lambda value: f"{value:.2f}"),
-                "average_review_score": (lambda value: f"{value:.2f}"),
-            },
-        )
-    )
+    print(_format_delivery_dataframe(delay_relationship))
 
 
 def main() -> None:
-    """
-    Run the initial delivery and customer-experience analyses.
-    """
+    """Run the delivery and customer-experience analyses."""
     connection = open_analytics_connection()
 
     try:

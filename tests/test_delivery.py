@@ -17,9 +17,7 @@ TEST_TABLE_NAME = "test_delivery_data"
 def create_test_table(
     connection: duckdb.DuckDBPyConnection,
 ) -> None:
-    """
-    Create a deterministic order-item dataset for delivery tests.
-    """
+    """Create a deterministic order-item dataset."""
     connection.execute(
         f"""
         CREATE TABLE {TEST_TABLE_NAME} (
@@ -103,7 +101,7 @@ def create_test_table(
                 20,
                 10,
                 TRUE,
-                1.0
+                NULL
             ),
             (
                 'order_6',
@@ -135,9 +133,17 @@ def test_delivery_performance_by_state_uses_order_grain() -> None:
         ca = result[result["customer_state"] == "CA"].iloc[0]
 
         assert ca["order_count"] == 2
+        assert ca["reviewed_order_count"] == 2
+        assert ca["review_coverage_percentage"] == 100.00
 
         assert math.isclose(
             ca["average_delivery_days"],
+            7.50,
+            abs_tol=0.01,
+        )
+
+        assert math.isclose(
+            ca["median_delivery_days"],
             7.50,
             abs_tol=0.01,
         )
@@ -149,10 +155,39 @@ def test_delivery_performance_by_state_uses_order_grain() -> None:
         )
 
         assert math.isclose(
+            ca["average_late_days_among_late_orders"],
+            2.00,
+            abs_tol=0.01,
+        )
+
+        assert math.isclose(
             ca["average_review_score"],
             3.50,
             abs_tol=0.01,
         )
+
+    finally:
+        connection.close()
+
+
+def test_review_coverage_exposes_missing_reviews() -> None:
+    connection = duckdb.connect(":memory:")
+
+    try:
+        create_test_table(connection)
+
+        result = get_delivery_performance_by_state(
+            connection,
+            TEST_TABLE_NAME,
+            minimum_order_count=1,
+        )
+
+        ny = result[result["customer_state"] == "NY"].iloc[0]
+
+        assert ny["order_count"] == 2
+        assert ny["reviewed_order_count"] == 1
+        assert ny["review_coverage_percentage"] == 50.00
+        assert ny["average_review_score"] == 5.00
 
     finally:
         connection.close()
@@ -173,6 +208,8 @@ def test_delivery_performance_by_category() -> None:
         electronics = result[result["product_category"] == "electronics"].iloc[0]
 
         assert electronics["order_count"] == 3
+        assert electronics["reviewed_order_count"] == 3
+        assert electronics["review_coverage_percentage"] == 100.00
 
         assert math.isclose(
             electronics["late_delivery_rate_percentage"],
@@ -206,11 +243,21 @@ def test_late_and_on_time_order_comparison() -> None:
         on_time = result[result["delivery_status"] == "on_time"].iloc[0]
 
         assert late["order_count"] == 3
+        assert late["reviewed_order_count"] == 2
+
+        assert math.isclose(
+            late["review_coverage_percentage"],
+            66.67,
+            abs_tol=0.01,
+        )
+
         assert on_time["order_count"] == 3
+        assert on_time["reviewed_order_count"] == 3
+        assert on_time["review_coverage_percentage"] == 100.00
 
         assert math.isclose(
             late["average_review_score"],
-            1.33,
+            1.50,
             abs_tol=0.01,
         )
 
@@ -247,6 +294,14 @@ def test_worst_delivery_sellers_respect_threshold() -> None:
             50.00,
         ]
 
+        seller_b = result[result["seller_id"] == "seller_b"].iloc[0]
+
+        assert math.isclose(
+            seller_b["average_late_days_among_late_orders"],
+            4.00,
+            abs_tol=0.01,
+        )
+
     finally:
         connection.close()
 
@@ -276,7 +331,10 @@ def test_delivery_review_relationship_bands() -> None:
         ].iloc[0]
 
         assert late_over_seven["order_count"] == 1
-        assert late_over_seven["average_review_score"] == 1.00
+        assert late_over_seven["reviewed_order_count"] == 0
+        assert late_over_seven["review_coverage_percentage"] == 0.00
+
+        assert math.isnan(late_over_seven["average_review_score"])
 
     finally:
         connection.close()
