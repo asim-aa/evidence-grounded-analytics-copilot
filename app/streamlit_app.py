@@ -359,7 +359,7 @@ def recent_topic_history(
         if message["role"] == "assistant" and pending_question is not None:
             evidence_data = message.get("evidence")
 
-            if evidence_data:
+            if evidence_data and evidence_data.get("supported") is True:
                 analysis_type = str(
                     evidence_data.get(
                         "analysis_type",
@@ -462,7 +462,7 @@ def resolve_follow_up_question(
                 f"change in {month_reference}?"
             )
 
-        return f"{previous_question}. Break down this analysis by state."
+        return "Which states generate the most revenue?"
 
     if any(
         term in normalized_question for term in ("category", "categories", "product")
@@ -473,7 +473,7 @@ def resolve_follow_up_question(
                 f"revenue change in {month_reference}?"
             )
 
-        return f"{previous_question}. Break down this analysis by product category."
+        return "Which product categories generate the most revenue?"
 
     if any(
         term in normalized_question
@@ -1122,6 +1122,28 @@ def render_methodology(
         )
 
 
+def prepare_explanation_markdown(
+    explanation: str,
+) -> str:
+    """
+    Prepare LLM output for safe Streamlit Markdown rendering.
+
+    Dollar signs are escaped so currency is not interpreted as LaTeX.
+    Evidence citations are displayed as compact inline-code references.
+    """
+    formatted = re.sub(
+        r"【([^】]+)】",
+        r"`[\1]`",
+        explanation,
+    )
+
+    return re.sub(
+        r"(?<!\\)\$",
+        r"\\$",
+        formatted,
+    )
+
+
 def render_answer(
     explanation: str,
     evidence: EvidenceResult,
@@ -1142,7 +1164,7 @@ def render_answer(
     )
 
     with st.container(border=True):
-        st.markdown(explanation)
+        st.markdown(prepare_explanation_markdown(explanation))
 
     with st.expander(
         "View evidence and methodology",
