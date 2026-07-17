@@ -9,11 +9,32 @@
   
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/ss1.png"
-       alt="Evidence-Grounded Analytics Copilot showing a revenue decline investigation with the answer and supporting evidence"
-       width="85%">
-</p>
+<table>
+  <tr>
+    <td width="43%" valign="top">
+      <img
+        src="docs/screenshots/ss1.png"
+        alt="GroundedIQ answer with KPI cards and evidence-backed explanation"
+        width="100%"
+      >
+    </td>
+    <td width="57%" valign="top">
+      <img
+        src="docs/screenshots/ss5.png"
+        alt="GroundedIQ Plotly visualization of revenue by customer state"
+        width="100%"
+      >
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <sub><b>Grounded analytical response</b></sub>
+    </td>
+    <td align="center">
+      <sub><b>Deterministic visual evidence</b></sub>
+    </td>
+  </tr>
+</table>
 
 ## Quick summary
 
