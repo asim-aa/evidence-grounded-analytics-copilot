@@ -1205,8 +1205,8 @@ def render_answer(
     evidence: EvidenceResult,
 ) -> None:
     """
-    Render one stable assistant answer without Arrow-backed tables
-    or Plotly chart serialization.
+    Render a grounded analytical answer with deterministic metrics,
+    visual evidence, and inspectable methodology.
     """
     badge_class = "supported-badge" if evidence.supported else "unsupported-badge"
 
@@ -1219,8 +1219,15 @@ def render_answer(
         unsafe_allow_html=True,
     )
 
+    if evidence.supported:
+        render_metric_cards(evidence)
+
     with st.container(border=True):
         st.markdown(prepare_explanation_markdown(explanation))
+
+    if evidence.supported:
+        st.markdown("### 📊 Visual evidence")
+        render_chart(evidence)
 
     with st.expander(
         "View evidence and methodology",
