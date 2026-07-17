@@ -1122,21 +1122,77 @@ def render_methodology(
         )
 
 
+_INTERNAL_REFERENCE_PATTERN = re.compile(
+    r"`*(?:"
+    r"【\s*(?:metric|row|warning|method):[^】]+】"
+    r"|"
+    r"\[\s*(?:metric|row|warning|method):[^\]]+\]"
+    r")`*",
+    re.IGNORECASE,
+)
+
+
 def prepare_explanation_markdown(
     explanation: str,
 ) -> str:
     """
-    Prepare LLM output for safe Streamlit Markdown rendering.
+    Prepare a grounded explanation for user-facing display.
 
-    Dollar signs are escaped so currency is not interpreted as LaTeX.
-    Evidence citations are displayed as compact inline-code references.
+    Internal evidence references remain available during generation
+    and auditing but are removed from the visible narrative.
     """
-    formatted = re.sub(
-        r"【([^】]+)】",
-        r"`[\1]`",
+    formatted = _INTERNAL_REFERENCE_PATTERN.sub(
+        "",
         explanation,
     )
 
+    # Clean up spacing left behind after removing references.
+    formatted = re.sub(
+        r"[ \t]+([,.;:!?])",
+        r"\1",
+        formatted,
+    )
+    formatted = re.sub(
+        r"[ \t]{2,}",
+        " ",
+        formatted,
+    )
+    formatted = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        formatted,
+    )
+
+    # Put each answer section heading on its own line.
+    section_headings = (
+        "Direct answer",
+        "Key evidence",
+        "Business interpretation",
+        "Limitations",
+    )
+
+    for heading in section_headings:
+        formatted = re.sub(
+            (
+                rf"(?im)^[ \t]*"
+                rf"(?:#{{1,6}}[ \t]*)?"
+                rf"(?:\*\*)?"
+                rf"{re.escape(heading)}"
+                rf"(?:\*\*)?"
+                rf"[ \t]*:?[ \t]*"
+            ),
+            f"**{heading}**\n\n",
+            formatted,
+        )
+
+    # Remove excessive blank lines created during normalization.
+    formatted = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        formatted,
+    )
+
+    # Prevent currency values from being interpreted as LaTeX.
     return re.sub(
         r"(?<!\\)\$",
         r"\\$",
@@ -1445,20 +1501,22 @@ def render_hero() -> None:
     """
     Render the application hero section.
 
-    Note: this must be built as a single HTML block with NO blank lines.
-    A blank line inside a markdown-embedded HTML block terminates the
-    block early (CommonMark HTML block rules), and Streamlit's markdown
-    renderer then treats subsequent indented lines as a code block
-    instead of raw HTML.
+    The HTML is built as one continuous block so Streamlit renders it
+    correctly instead of interpreting parts of it as Markdown code.
     """
     hero_html = (
         '<div class="hero-card">'
-        '<h1 class="hero-title">Evidence-Grounded Analytics Copilot</h1>'
+        '<h1 class="hero-title">'
+        'Grounded<span style="color:#c4b5fd;">IQ</span>'
+        "</h1>"
+        '<h3 style="margin-top:0.75rem; color:#E2E8F0;">'
+        "Business intelligence you can verify."
+        "</h3>"
         '<p class="hero-subtitle">'
         "Ask business questions in natural language. "
-        "The system retrieves validated analytical evidence, "
-        "performs deterministic investigations, and uses a "
-        "constrained language model to explain the results."
+        "GroundedIQ runs deterministic analytics, retrieves validated "
+        "evidence, and uses a constrained language model to explain "
+        "the results."
         "</p>"
         '<div class="badge-row">'
         '<span class="badge">✓ Deterministic analytics</span>'
@@ -1513,7 +1571,7 @@ def main() -> None:
     Render the complete Streamlit copilot.
     """
     st.set_page_config(
-        page_title="Evidence-Grounded Analytics Copilot",
+        page_title="GroundedIQ",
         page_icon="📊",
         layout="wide",
         initial_sidebar_state="expanded",
