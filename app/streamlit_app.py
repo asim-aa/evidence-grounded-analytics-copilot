@@ -864,6 +864,8 @@ def prepare_evidence_dataframe(
 
 def render_chart(
     evidence: EvidenceResult,
+    *,
+    chart_key: str,
 ) -> None:
     """
     Render one chart appropriate for the selected analysis route.
@@ -1055,6 +1057,7 @@ def render_chart(
 
     st.plotly_chart(
         figure,
+        key=chart_key,
         width="stretch",
         config={
             "displayModeBar": False,
@@ -1203,6 +1206,8 @@ def prepare_explanation_markdown(
 def render_answer(
     explanation: str,
     evidence: EvidenceResult,
+    *,
+    chart_key: str,
 ) -> None:
     """
     Render a grounded analytical answer with deterministic metrics,
@@ -1227,7 +1232,10 @@ def render_answer(
 
     if evidence.supported:
         st.markdown("### 📊 Visual evidence")
-        render_chart(evidence)
+        render_chart(
+            evidence,
+            chart_key=chart_key,
+        )
 
     with st.expander(
         "View evidence and methodology",
@@ -1273,6 +1281,8 @@ def render_answer(
 
 def render_message(
     message: dict[str, Any],
+    *,
+    message_index: int,
 ) -> None:
     """
     Render one stored chat message.
@@ -1293,11 +1303,12 @@ def render_message(
 
             if interpreted_question:
                 st.caption(f"🧭 Interpreted as: *{interpreted_question}*")
-
             render_answer(
                 explanation=str(message["content"]),
                 evidence=evidence,
+                chart_key=f"history_chart_{message_index}",
             )
+
         else:
             st.markdown(message["content"])
 
@@ -1420,10 +1431,10 @@ def process_question(
 
         if question_was_rewritten:
             st.caption(f"🧭 Interpreted as: *{routed_question}*")
-
         render_answer(
             explanation=explanation,
             evidence=evidence,
+            chart_key=(f"current_chart_{len(st.session_state.messages)}"),
         )
 
     assistant_message = {
@@ -1593,9 +1604,11 @@ def main() -> None:
 
     if not st.session_state.messages:
         render_empty_state()
-
-    for message in st.session_state.messages:
-        render_message(message)
+    for message_index, message in enumerate(st.session_state.messages):
+        render_message(
+            message,
+            message_index=message_index,
+        )
 
     typed_question = st.chat_input(
         "Ask a business question about revenue, delivery, or reviews..."
