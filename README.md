@@ -1,27 +1,21 @@
-<h1 align="center">Evidence-Grounded Analytics Copilot</h1>
+<h1 align="center">GroundIQ Analytics Copilot</h1>
 
 <p align="center"><strong>A conversational business-intelligence application that calculates answers with deterministic, tested analytics and uses an LLM only to explain the verified evidence.</strong></p>
 
 <p align="center"><code>Python 3.12</code> · <code>DuckDB</code> · <code>pandas 2.3.3</code> · <code>Streamlit</code> · <code>Pydantic</code> · <code>OpenAI-compatible APIs</code> · <code>pytest</code> · <code>Ruff</code></p>
 
-<!--
-PROJECT PREVIEW — add after capturing the final assets.
-
-Recommended hero image:
 <p align="center">
-  <img src="docs/assets/hero-revenue-investigation.png"
+  🎥 <a href="YOUR_DEMO_VIDEO_URL">90-second demo</a> •
+  🚀 <a href="YOUR_LIVE_APP_URL">Live application</a>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/ss1.png"
        alt="Evidence-Grounded Analytics Copilot showing a revenue decline investigation with the answer and supporting evidence"
-       width="100%">
+       width="85%">
 </p>
 
-Recommended links:
-<p align="center">
-  <a href="YOUR_DEMO_VIDEO_URL">90-second demo</a> ·
-  <a href="YOUR_LIVE_APP_URL">Live application</a>
-</p>
--->
-
-## Recruiter snapshot
+## Quick summary
 
 - Converts natural-language business questions into a **defined registry of deterministic analyses** instead of allowing unrestricted text-to-SQL generation.
 - Builds a validated DuckDB analytical table from **seven Olist source files**, producing **112,650 order-item rows across 31 fields** in the current dataset build.
@@ -46,7 +40,7 @@ The result is a local, inspectable business-intelligence copilot that demonstrat
 - **Reusable analytics engine** — calculates core KPIs, revenue trends, geographic and category performance, delivery outcomes, review relationships, and multi-step revenue-change investigations.
 - **Structured evidence contract** — standardizes every result into an `EvidenceResult` with a summary, metrics, supporting rows, methodology, and warnings.
 - **Evidence-grounded explanations** — sends only verified evidence to the LLM and constrains it to explain the supplied facts rather than calculate new ones.
-- **Controlled conversational follow-ups** — retains recent supported context, resolves short follow-ups into standalone questions, and shows the user an explicit **“Interpreted as”** note.
+- **Controlled conversational follow-ups** — retains recent supported context, resolves short follow-ups into standalone questions, and shows the user an explicit **"Interpreted as"** note.
 - **Safe unsupported behavior** — bypasses the LLM for unsupported questions and returns a deterministic explanation of the current analytical boundary.
 - **Streamlit product interface** — provides quick-question controls, chat history, processing status, supported/unsupported indicators, and expandable evidence and methodology.
 
@@ -86,15 +80,20 @@ The application intentionally supports a bounded analytical surface. That bounda
 
 | Analysis | Example question | Main output |
 |---|---|---|
-| Core marketplace KPIs | “Give me an overview of the main business KPIs.” | Revenue, orders, average order value, late-delivery rate, and review score |
-| Monthly revenue trend | “How has revenue changed over time?” | Complete-month revenue and month-over-month growth |
-| Revenue by product category | “Which product categories generate the most revenue?” | Ranked category revenue, order count, and revenue share |
-| Revenue by customer state | “Which states generate the most revenue?” | Ranked state revenue, order count, and revenue share |
-| Delivery performance by state | “Which states have the worst delivery performance?” | Late-delivery rate, delivery duration, order volume, and review metrics |
-| Late versus on-time orders | “How do late deliveries affect customer review scores?” | Review-score and delivery-duration comparison by delivery status |
-| Revenue-change investigation | “Why did revenue decline in June 2018?” | Revenue, order-volume, average-order-value, category, and state decomposition |
+| Core marketplace KPIs | "Give me an overview of the main business KPIs." | Revenue, orders, average order value, late-delivery rate, and review score |
+| Monthly revenue trend | "How has revenue changed over time?" | Complete-month revenue and month-over-month growth |
+| Revenue by product category | "Which product categories generate the most revenue?" | Ranked category revenue, order count, and revenue share |
+| Revenue by customer state | "Which states generate the most revenue?" | Ranked state revenue, order count, and revenue share |
+| Delivery performance by state | "Which states have the worst delivery performance?" | Late-delivery rate, delivery duration, order volume, and review metrics |
+| Late versus on-time orders | "How do late deliveries affect customer review scores?" | Review-score and delivery-duration comparison by delivery status |
+| Revenue-change investigation | "Why did revenue decline in June 2018?" | Revenue, order-volume, average-order-value, category, and state decomposition |
 
 Questions that do not match a supported route return a clear refusal. The system does not silently broaden the request or ask the LLM to improvise an answer.
+
+<p align="center">
+<img src="docs/screenshots/ss4.png" width="85%">
+</p>
+<p align="center"><em>Category-level investigation generated from the same evidence pipeline.</em></p>
 
 ## Example conversation
 
@@ -115,6 +114,13 @@ Which product categories contributed most to the revenue change in June 2018?
 Copilot
 Runs the supported revenue-change investigation with category-level evidence.
 ```
+
+<p align="center">
+  <img src="docs/screenshots/ss2.png" width="85%">
+</p>
+<p align="center">
+  <em>Conversational follow-up rewritten into a standalone analytical question.</em>
+</p>
 
 The visible interpretation step makes contextual behavior inspectable instead of silently rewriting the user's request.
 
@@ -141,6 +147,11 @@ This contract separates responsibilities cleanly:
 - The LLM explains only the packaged evidence.
 - Streamlit renders the same structure regardless of analysis type.
 - Tests can verify the deterministic result without making an external model request.
+
+<p align="center">
+<img src="docs/screenshots/ss3.png" width="85%">
+</p>
+<p align="center"><em>Inspectable metrics, supporting rows, and methodology behind a single answer.</em></p>
 
 ## Data and metric correctness
 
@@ -433,13 +444,13 @@ The Streamlit runtime was also validated through layered manual smoke testing of
 - Generated explanations require a reachable OpenAI-compatible endpoint. The deterministic evidence engine remains independently executable.
 - The stable answer renderer emphasizes Markdown and JSON-style evidence inspection over the richer chart/table rendering utilities present in the UI module.
 
-## Practical next steps
+## Future work
 
-- Add the final hero screenshot, evidence screenshot, and 60–90 second demo.
-- Add GitHub Actions for automated pytest and Ruff checks.
-- Build a labeled evaluation set for router accuracy, follow-up resolution, refusal behavior, and explanation faithfulness.
-- Expand the handler registry only when each new analysis has an explicit metric definition, evidence contract, and test coverage.
-- Add deployment configuration if the application is published as a hosted demo.
+- Expand analytical coverage with additional registered analyses
+- Add router evaluation benchmarks for intent-routing and follow-up-resolution accuracy
+- Add GitHub Actions for automated pytest and Ruff checks
+- Add authentication and deploy the application publicly
+- Support user-uploaded datasets through a configurable semantic layer
 
 ## Skills demonstrated
 
