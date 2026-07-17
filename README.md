@@ -6,7 +6,7 @@
 
 <p align="center">
   🎥 <a href="YOUR_DEMO_VIDEO_URL">90-second demo</a> •
-  🚀 <a href="YOUR_LIVE_APP_URL">Live application</a>
+  
 </p>
 
 <p align="center">
